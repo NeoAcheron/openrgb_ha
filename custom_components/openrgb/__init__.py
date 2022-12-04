@@ -14,8 +14,10 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_ADD_LEDS,
+    CONF_ADD_ZONES,
     CONFIG_VERSION,
     DEFAULT_ADD_LEDS,
+    DEFAULT_ADD_ZONES,
     DEFAULT_CLIENT_ID,
     DEFAULT_PORT,
     DOMAIN,
@@ -29,7 +31,7 @@ from .const import (
     SIGNAL_UPDATE_ENTITY,
     TRACK_INTERVAL,
 )
-from .helpers import orgb_entity_id
+from .helpers import orgb_entity_id, orgb_zone_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +45,7 @@ CONFIG_SCHEMA = vol.Schema(
                     vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
                     vol.Optional(CONF_CLIENT_ID, default=DEFAULT_CLIENT_ID): cv.string,
                     vol.Optional(CONF_ADD_LEDS, default=DEFAULT_ADD_LEDS): cv.boolean,
+                    vol.Optional(CONF_ADD_ZONES, default=DEFAULT_ADD_ZONES): cv.boolean,
                 }
             )
         },
@@ -200,6 +203,14 @@ async def async_setup_entry(hass, entry):
                     if led_unique_id not in hass.data[DOMAIN][entry.entry_id]["entities"]:
                         hass.data[DOMAIN][entry.entry_id]["entities"][led_unique_id] = None
 
+            if CONF_ADD_ZONES in config and config[CONF_ADD_ZONES]:
+                # Stores each ZONE of the device as an entity
+                for zone in device.zones:
+                    zone_name = orgb_zone_id(zone)
+                    zone_unique_id = f"{device_unique_id}_zone_{zone_name}"
+                    if zone_unique_id not in hass.data[DOMAIN][entry.entry_id]["entities"]:
+                        hass.data[DOMAIN][entry.entry_id]["entities"][zone_unique_id] = None
+
         for ha_type, dev_ids in device_type_list.items():
             config_entries_key = f"{ha_type}.openrgb"
 
@@ -265,15 +276,15 @@ async def async_setup_entry(hass, entry):
             if dev_id not in newlist_ids:
                 async_dispatcher_send(hass, SIGNAL_DELETE_ENTITY, dev_id)
                 
-                for led_id in hass.data[DOMAIN][entry.entry_id]["devices"][dev_id]:
-                    async_dispatcher_send(hass, SIGNAL_DELETE_ENTITY, led_id)
+                for sub_dev_id in hass.data[DOMAIN][entry.entry_id]["devices"][dev_id]:
+                    async_dispatcher_send(hass, SIGNAL_DELETE_ENTITY, sub_dev_id)
 
                 hass.data[DOMAIN][entry.entry_id]["devices"].pop(dev_id)
             else:
                 async_dispatcher_send(hass, SIGNAL_UPDATE_ENTITY, dev_id)
                 
-                for led_id in hass.data[DOMAIN][entry.entry_id]["devices"][dev_id]:
-                    async_dispatcher_send(hass, SIGNAL_UPDATE_ENTITY, led_id)
+                for sub_dev_id in hass.data[DOMAIN][entry.entry_id]["devices"][dev_id]:
+                    async_dispatcher_send(hass, SIGNAL_UPDATE_ENTITY, sub_dev_id)
 
         autolog(">>>")
 

@@ -20,9 +20,11 @@ SIGNAL_UPDATE_ENTITY = "openrgb_update"
 TRACK_INTERVAL = timedelta(seconds=30)
 
 CONF_ADD_LEDS = "add_leds"
+CONF_ADD_ZONES = "add_zones"
 
 DEFAULT_PORT = 6742
 DEFAULT_CLIENT_ID = "Home Assistant"
 DEFAULT_ADD_LEDS = False
+DEFAULT_ADD_ZONES = True
 
 CONN_TIMEOUT = 5.0

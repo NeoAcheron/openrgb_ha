@@ -13,6 +13,9 @@ def orgb_object_id(instance):
     """Return the ORGB Devices object id."""
     return f"{instance.name} {instance.device_id}".replace(" ", "_").lower()
 
+def orgb_zone_id(instance):
+    """Return the ORGB Zone object id. Because these are usually set nicely, we can use the name"""
+    return f"{instance.name}".replace(" ", "_").lower()
 
 def orgb_entity_id(instance):
     """Return the ORGB devices entity ID."""

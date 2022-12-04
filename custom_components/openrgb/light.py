@@ -20,12 +20,13 @@ import homeassistant.util.color as color_util
 
 from .const import (
     CONF_ADD_LEDS,
+    CONF_ADD_ZONES,
     DOMAIN,
     ORGB_DISCOVERY_NEW,
     SIGNAL_DELETE_ENTITY,
     SIGNAL_UPDATE_ENTITY,
 )
-from .helpers import orgb_entity_id, orgb_icon, orgb_object_id, orgb_tuple
+from .helpers import orgb_entity_id, orgb_icon, orgb_object_id, orgb_tuple, orgb_zone_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             config_entry.entry_id,
             dev_ids,
             config_entry.data[CONF_ADD_LEDS] if CONF_ADD_LEDS in config_entry.data else False,
+            config_entry.data[CONF_ADD_ZONES] if CONF_ADD_ZONES in config_entry.data else True,
         )
         async_add_entities(entities, True)
 
@@ -54,7 +56,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     await async_discover_sensor(config_entry.entry_id, device_ids)
 
 
-def _setup_entities(hass, entry_id, dev_ids, add_leds):
+def _setup_entities(hass, entry_id, dev_ids, add_leds, add_zones):
     """Set up OpenRGB Light device."""
     entities = []
     for dev_id in dev_ids:
@@ -76,6 +78,13 @@ def _setup_entities(hass, entry_id, dev_ids, add_leds):
                 led_unique_id = f"{device_unique_id}_led_{led.id}"
                 if not hass.data[DOMAIN][entry_id]["entities"].get(led_unique_id, None):
                     entities.append(OpenRGBLed(hass, ha_dev_unique_id, entry_id, dev_id, led.id, led_unique_id))
+
+        if add_zones:
+            for zone in dev_id.zones:
+                zone_name = orgb_zone_id(zone)
+                zone_unique_id = f"{device_unique_id}_zone_{zone_name}"
+                if not hass.data[DOMAIN][entry_id]["entities"].get(zone_unique_id, None):
+                    entities.append(OpenRGBZone(hass, ha_dev_unique_id, entry_id, dev_id, zone.id, zone_unique_id, zone.name))
     return entities
 
 class OpenRGBLight(LightEntity):
@@ -394,6 +403,72 @@ class OpenRGBLed(OpenRGBLight):
         )
         try:
             self._light.leds[self._led_id].set_color(RGBUtils.RGBColor(*color))
+            self._assumed_state = False
+        except ConnectionError:
+            self.hass.data[DOMAIN][self._entry_id]["connection_failed"]()
+
+class OpenRGBZone(OpenRGBLight):
+    """Representation of an LED Zone from an OpenRGB Device."""
+
+    def __init__(self, hass, ha_dev_unique_id, entry_id, light, zone_id, unique_id, zone_name_pretty):
+        """Initialize an OpenRGB light."""
+        super().__init__(hass, ha_dev_unique_id, entry_id)
+        self._light = light
+        self._callbacks = []
+        self._zone_id = zone_id
+        self._unique_id = unique_id
+        self._zone_name_pretty = zone_name_pretty
+        self._attr_unique_id = f'{ha_dev_unique_id}_{unique_id}'
+        self._name = self._retrieve_current_name()
+        _LOGGER.debug ("led name: %s", self._name)
+
+        self._brightness = 100.0
+        self._prev_brightness = 100.0
+
+        self._hs_value = (0.0, 0.0)
+        self._prev_hs_value = (0.0, 0.0)
+
+        self._state = True
+        self._assumed_state = True
+
+    async def async_added_to_hass(self):
+        """Call when entity is added to hass."""
+
+        self.hass.data[DOMAIN][self._entry_id]["entities"][self._unique_id] = self._attr_unique_id
+        self._callbacks.append(
+            async_dispatcher_connect(
+                self.hass, SIGNAL_DELETE_ENTITY, self._delete_callback
+            )
+        )
+        self._callbacks.append(
+            async_dispatcher_connect(
+                self.hass, SIGNAL_UPDATE_ENTITY, self._update_callback
+            )
+        )
+
+    @property
+    def zone_id(self):
+        """Return the id of the assigned led."""
+        return self._zone_id
+
+    @property
+    def supported_features(self):
+        """Return the supported features for this device."""
+        return SUPPORT_COLOR | SUPPORT_BRIGHTNESS
+
+    def _retrieve_current_name(self) -> str:
+        return f"ZONE {self._zone_name_pretty}"
+
+    def _retrieve_active_color(self) -> tuple[float, float]:
+        return color_util.color_RGB_to_hs(*orgb_tuple(self._light.zones[self._zone_id].colors[0])) # Return the first colour in the zone, because we have nothing else
+
+    def _set_color(self):
+        """Set the devices color using the library."""
+        color = color_util.color_hsv_to_RGB(
+            *(self._hs_value), 100.0 * (self._brightness / 255.0)
+        )
+        try:
+            self._light.zones[self._zone_id].set_color(RGBUtils.RGBColor(*color))
             self._assumed_state = False
         except ConnectionError:
             self.hass.data[DOMAIN][self._entry_id]["connection_failed"]()
