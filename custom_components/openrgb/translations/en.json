@@ -15,7 +15,8 @@
                     "client_id": "Client ID",
                     "host": "Host",
                     "port": "Port",
-                    "add_leds": "Add individual leds"
+                    "add_leds": "Add individual leds",
+                    "add_zones": "Add device zones"
                 },
                 "description": "Configure the connection details.",
                 "title": "OpenRGB"
@@ -38,7 +39,8 @@
                     "client_id": "Client ID",
                     "host": "Host",
                     "port": "Port",
-                    "add_leds": "Add individual leds"
+                    "add_leds": "Add individual leds",
+                    "add_zones": "Add device zones"
                 },
                 "description": "Configure the connection details.",
                 "title": "OpenRGB"

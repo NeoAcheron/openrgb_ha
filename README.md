@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 2.3
+
+- Add zone support. Zones can now be controlled as opposed to individual LEDs or whole devices
+
 ### 2.2 [Breaking]
 
 - Fix multiple instances

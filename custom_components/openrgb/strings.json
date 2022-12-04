@@ -10,7 +10,8 @@
                     "host": "[%key:common::config_flow::data::host%]",
                     "port": "[%key:common::config_flow::data::port%]",
                     "client_id": "Client ID",
-                    "add_leds": "Add individual leds"
+                    "add_leds": "Add individual leds",
+                    "add_leds": "Add device zones"
                 }
             }
         },
@@ -33,7 +34,8 @@
                     "host": "[%key:common::config_flow::data::host%]",
                     "port": "[%key:common::config_flow::data::port%]",
                     "client_id": "Client ID",
-                    "add_leds": "Add individual leds"
+                    "add_leds": "Add individual leds",
+                    "add_zones": "Add device zones"
                 }
             }
         },
